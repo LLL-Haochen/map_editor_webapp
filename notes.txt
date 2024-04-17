@@ -1,0 +1,29 @@
+1. command to build the setup image
+
+    docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t vue_helper - < ./Setup.Dockerfile
+
+2. command to mount image to volume and interactively run the container
+
+    docker run -v $(pwd):/vue-setup -it vue_helper
+
+3. in the interactive container shell 
+
+    vue create vue_app
+
+4. build the dev container with the dev.Dockerfile
+
+    docker build -f ./Dev.Dockerfile -t vue_app:dev vue_app
+
+5. launch the development container
+
+    docker run -v $(pwd)/vue_app:/vue_app -p 8080:8080 -it vue_app:dev
+
+6. to add additional dependencies to the project, step 2 can probably be leveraged, but we may need to account for the nested vue_app directory
+
+7. to build the production image from the deploy.Dockerfile
+
+    docker build -f ./Deploy.Dockerfile -t vue_app:production vue_app
+
+8. launch the deploy/production container and use it to serve the SPA on localhost port 80 (NOTE: THERE WAS A HANG UP HERE, THE APP ISNT ACTUALLY AVAILABLE ON PORT 80, THE DOCKER CLI SEEMS A BIT STUCK SPAWNING WORKER PROCESSES)
+
+    docker run -p 80:80 vue_app:production
