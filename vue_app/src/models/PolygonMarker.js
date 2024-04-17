@@ -5,8 +5,8 @@ export default class PolygonMarker {
         this.selected = false;
     }
 
-    addPoint(x, y) {
-        this.points.push({ x: x, y: y });
+    addVertex(x, y) {
+        this.points.push({ x, y });
     }
 
     toggleSelection() {
@@ -15,26 +15,25 @@ export default class PolygonMarker {
 
     draw(ctx) {
         if (this.points.length < 3) return;  // Need at least three points to draw a polygon
-
+        console.log('Drawing polygon with points:', this.points.vertices[0]);
         ctx.strokeStyle = this.selected ? 'blue' : 'red';
         ctx.lineWidth = this.thickness;
         ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-        this.points.forEach((point, index) => {
+        ctx.moveTo(this.points.vertices[0].x, this.points.vertices[0].y);
+        this.points.vertices.forEach((point, index) => {
             if (index > 0) ctx.lineTo(point.x, point.y);
         });
-        ctx.closePath(); // Connects the last point back to the first point
+        ctx.closePath();
         ctx.stroke();
     }
 
     isInside(x, y) {
-        // Ray-casting algorithm for determining if a point is inside a polygon
         let inside = false;
         for (let i = 0, j = this.points.length - 1; i < this.points.length; j = i++) {
-            let xi = this.points[i].x, yi = this.points[i].y;
-            let xj = this.points[j].x, yj = this.points[j].y;
+            const xi = this.points[i].x, yi = this.points[i].y;
+            const xj = this.points[j].x, yj = this.points[j].y;
 
-            let intersect = ((yi > y) != (yj > y))
+            const intersect = ((yi > y) !== (yj > y))
                 && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
             if (intersect) inside = !inside;
         }

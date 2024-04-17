@@ -1,4 +1,3 @@
-// src/store/modules/polygons.js
 import PolygonMarker from '@/models/PolygonMarker';
 
 export default {
@@ -6,17 +5,17 @@ export default {
     polygons: []
   }),
   mutations: {
-    ADD_POLYGON(state, polygon) {
-      state.polygons.push(polygon);
+    ADD_POLYGON(state, { vertices }) {
+      state.polygons.push(new PolygonMarker(vertices));
     },
-    ADD_VERTEX(state, { index, x, y }) {
-      if (state.polygons[index]) {
-        state.polygons[index].addVertex(x, y);
+    ADD_VERTEX(state, { polygonIndex, x, y }) {
+      if (state.polygons[polygonIndex]) {
+        state.polygons[polygonIndex].addVertex(x, y);
       }
     },
-    TOGGLE_SELECTION(state, index) {
-      if (state.polygons[index]) {
-        state.polygons[index].toggleSelection();
+    TOGGLE_SELECTION(state, polygonIndex) {
+      if (state.polygons[polygonIndex]) {
+        state.polygons[polygonIndex].toggleSelection();
       }
     },
     CLEAR_POLYGONS(state) {
@@ -24,22 +23,23 @@ export default {
     }
   },
   actions: {
-    createPolygon({ commit }) {
-      const polygon = new PolygonMarker();
-      commit('ADD_POLYGON', polygon);
-      return state.polygons.length - 1;  // return the index of the new polygon
+    addPolygon({ commit }, vertices = []) {
+      commit('ADD_POLYGON', { vertices });
     },
-    addVertex({ commit }, payload) {
-      commit('ADD_VERTEX', payload);
+    addVertex({ commit, state }, { x, y }) {
+      const polygonIndex = state.polygons.length - 1; // Assumes new vertices go to the most recently created polygon
+      if (polygonIndex >= 0) {
+        commit('ADD_VERTEX', { polygonIndex, x, y });
+      }
     },
-    toggleSelection({ commit }, index) {
-      commit('TOGGLE_SELECTION', index);
+    toggleSelection({ commit }, polygonIndex) {
+      commit('TOGGLE_SELECTION', polygonIndex);
     },
     clearPolygons({ commit }) {
       commit('CLEAR_POLYGONS');
     }
   },
   getters: {
-    polygons: state => state.polygons
+    getPolygons: state => state.polygons
   }
 };

@@ -30,6 +30,6 @@ export default {
     }
   },
   getters: {
-    lines: state => state.lines
+    getLines: state => state.lines
   }
 };

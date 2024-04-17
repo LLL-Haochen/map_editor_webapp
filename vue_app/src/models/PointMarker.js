@@ -11,7 +11,7 @@ export default class PointMarker {
     }
   
     draw(ctx) {
-      ctx.fillStyle = this.selected ? 'blue' : 'red';
+      ctx.fillStyle = this.selected ? 'green' : 'blue';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, true);
       ctx.fill();

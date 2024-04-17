@@ -27,6 +27,6 @@ export default {
     }
   },
   getters: {
-    points: state => state.points
+    getPoints: state => state.points
   }
 };
