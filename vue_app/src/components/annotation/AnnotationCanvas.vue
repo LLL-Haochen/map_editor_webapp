@@ -7,13 +7,15 @@
       @click="handleCanvasClick"
     ></canvas>
     <div>
-      <button @click="setTool('point')">Draw Points</button>
-      <button @click="setTool('line')">Draw Lines</button>
-      <button @click="setTool('polygon')">Draw Polygons</button>
-      <button @click="finalizePolygon">Finalize Polygon</button>
-      <button @click="clearCanvas">Clear Canvas</button>
+      <input type="file" @change="uploadImage" accept="image/png"/>
+      <v-btn color="primary" @click="setTool('point')">Draw Points</v-btn>
+      <v-btn color="primary" @click="setTool('line')">Draw Lines</v-btn>
+      <v-btn color="primary" @click="setTool('polygon')">Draw Polygons</v-btn>
+      <v-btn color="secondary" @click="finalizePolygon">Finalize Polygon</v-btn>
+      <v-btn color="error" @click="clearCanvas">Clear Canvas</v-btn>
     </div>
-  </template>
+</template>
+
   
   <script>
   import { mapActions, mapGetters } from 'vuex';
@@ -24,6 +26,7 @@
         tool: 'point',  // 'point', 'line', 'polygon'
         currentPolygon: [], // Temporary storage for the current polygon being drawn
         currentLine: null, // Temporary storage for the current line being drawn
+        img: null,
       };
     },
     computed: {
@@ -62,6 +65,23 @@
           console.error('Canvas element is not yet available');
         }
       },
+      uploadImage(event) {
+        const file = event.target.files[0];
+        if (file.type !== "image/png") {
+            alert("Please upload a PNG image.");
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                this.img = img; // Save the loaded image to the img data property
+                this.redrawCanvas(); // Redraw canvas to display the image immediately after loading
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+},
       handleCanvasClick(e) {
       const rect = this.$refs.interactiveCanvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -119,6 +139,10 @@
     redrawCanvas() {
     const ctx = this.$refs.interactiveCanvas.getContext('2d');
     ctx.clearRect(0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
+
+    if (this.img) {
+        ctx.drawImage(this.img, 0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
+    }
 
     // Draw all points
     this.points.forEach(point => {
