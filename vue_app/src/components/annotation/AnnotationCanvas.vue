@@ -8,14 +8,13 @@
     ></canvas>
     <div>
       <input type="file" @change="uploadImage" accept="image/png"/>
-      <v-btn color="primary" @click="setTool('point')">Draw Points</v-btn>
-      <v-btn color="primary" @click="setTool('line')">Draw Lines</v-btn>
-      <v-btn color="primary" @click="setTool('polygon')">Draw Polygons</v-btn>
-      <v-btn color="secondary" @click="finalizePolygon">Finalize Polygon</v-btn>
-      <v-btn color="error" @click="clearCanvas">Clear Canvas</v-btn>
+      <v-btn @click="setTool('point')">Draw Points</v-btn>
+      <v-btn @click="setTool('line')">Draw Lines</v-btn>
+      <v-btn @click="setTool('polygon')">Draw Polygons</v-btn>
+      <v-btn @click="finalizePolygon">Finalize Polygon</v-btn>
+      <v-btn @click="clearCanvas">Clear Canvas</v-btn>
     </div>
 </template>
-
   
   <script>
   import { mapActions, mapGetters } from 'vuex';
@@ -166,3 +165,35 @@
   }
 };
 </script>
+
+<style scoped>
+.btn-draw-points {
+    background-color: #42A5F5; /* Light blue */
+    color: white;
+}
+
+.btn-draw-lines {
+    background-color: #66BB6A; /* Green */
+    color: white;
+}
+
+.btn-draw-polygons {
+    background-color: #FFA726; /* Orange */
+    color: white;
+}
+
+.btn-finalize-polygon {
+    background-color: #AB47BC; /* Purple */
+    color: white;
+}
+
+.btn-clear-canvas {
+    background-color: #EF5350; /* Red */
+    color: white;
+}
+
+/* You can also add general hover effects */
+.v-btn:hover {
+    opacity: 0.85;
+}
+</style>
