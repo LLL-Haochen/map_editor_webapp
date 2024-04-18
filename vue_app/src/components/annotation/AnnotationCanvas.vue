@@ -5,6 +5,8 @@
       height="400"
       style="border:1px solid #000000;"
       @click="handleCanvasClick"
+      @mousemove="handleMouseMove"
+      @mouseleave="clearPreview"
     ></canvas>
     <div>
       <input type="file" @change="uploadImage" accept="image/png"/>
@@ -23,9 +25,10 @@
     data() {
       return {
         tool: 'point',  // 'point', 'line', 'polygon'
-        currentPolygon: [], // Temporary storage for the current polygon being drawn
-        currentLine: null, // Temporary storage for the current line being drawn
+        currentPolygon: [],
+        currentLine: null,
         img: null,
+        previewLine: null,  // Holds the preview line coordinates
       };
     },
     computed: {
@@ -36,9 +39,6 @@
       })
     },
     mounted() {
-    console.log(this.points);  // Check if points are defined
-    console.log(this.lines);   // Check if lines are defined
-    console.log(this.polygons); 
       this.setupCanvas();
     },
     methods: {
@@ -49,151 +49,149 @@
         addLine: 'addLine',
         addPolygon: 'addPolygon',
         addVertexToPolygon: 'addVertexToPolygon',
-        
       }),
       setTool(tool) {
-          this.tool = tool;
-          console.log("Setting tool from", this.tool, "to", tool);
-        },
+        this.tool = tool;
+      },
       setupCanvas() {
         const canvas = this.$refs.interactiveCanvas;
         if (canvas) {
           this.ctx = canvas.getContext('2d');
-          this.redrawCanvas();  // Redraw all drawable elements
+          this.redrawCanvas();  // Initial draw
         } else {
           console.error('Canvas element is not yet available');
         }
       },
       uploadImage(event) {
-        const file = event.target.files[0];
-        if (file.type !== "image/png") {
-            alert("Please upload a PNG image.");
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                this.img = img; // Save the loaded image to the img data property
-                this.redrawCanvas(); // Redraw canvas to display the image immediately after loading
-            };
-            img.src = e.target.result;
+      console.log('Uploading image1',event);
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = e => {
+        console.log('Uploading image2',e);
+        const img = new Image();
+        img.onload = (b) => {
+          console.log('Uploading image3',b);
+          this.img = img;
+          this.$refs.interactiveCanvas.width = img.width;  // Set canvas width to image width
+          this.$refs.interactiveCanvas.height = img.height;  // Set canvas height to image height
+          this.redrawCanvas();  // Draw the image onto the canvas
         };
-        reader.readAsDataURL(file);
-},
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    },
       handleCanvasClick(e) {
-      const rect = this.$refs.interactiveCanvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      console.log(this.tool);  // Check if points are defined
-      console.log(mouseX, mouseY);  // Check if points are defined
-      switch (this.tool) {
-        case 'point':
-          this.handlePointClick(mouseX, mouseY);
-          break;
-        case 'line':
-          this.handleLineClick(mouseX, mouseY);
-          break;
-        case 'polygon':
-          this.handlePolygonClick(mouseX, mouseY);
-          break;
-      }
-
-      this.redrawCanvas();
+        console.log('handleCanvasClick',e);
+        console.log('handleCanvasClick',this.points);
+        
+        const { mouseX, mouseY } = this.getMousePosition(e);
+        switch (this.tool) {
+          case 'point':
+          
+            this.handlePointClick(mouseX, mouseY);
+            break;
+          case 'line':
+            this.handleLineClick(mouseX, mouseY);
+            break;
+          case 'polygon':
+            this.handlePolygonClick(mouseX, mouseY);
+            break;
+        }
+        this.redrawCanvas();
+      },
+      handleMouseMove(e) {
+        if (this.tool === 'line' && this.currentLine) {
+        const { mouseX, mouseY } = this.getMousePosition(e);
+        this.previewLine = { startX: this.currentLine.startX, startY: this.currentLine.startY, endX: mouseX, endY: mouseY };
+        this.redrawCanvas();
+        } else if (this.tool === 'polygon' && this.currentPolygon.length > 0) {
+        const { mouseX, mouseY } = this.getMousePosition(e);
+        // Update the preview line to the current mouse position from the last vertex
+        const lastVertex = this.currentPolygon[this.currentPolygon.length - 1];
+        this.previewLine = { startX: lastVertex.x, startY: lastVertex.y, endX: mouseX, endY: mouseY };
+        this.redrawCanvas();
+        }
     },
-    handlePointClick(mouseX, mouseY) {
-      const pointIndex = this.points.findIndex(point => point.isInside(mouseX, mouseY));
-      if (pointIndex !== -1) {
-        this.togglePointSelection(pointIndex);
-      } else {
+      handlePointClick(mouseX, mouseY) {
+        console.log('handlePointClick',mouseX,mouseY);
         this.addPoint({ x: mouseX, y: mouseY });
-      }
-    },
-    handleLineClick(mouseX, mouseY) {
-      if (!this.currentLine) {
-        this.currentLine = { startX: mouseX, startY: mouseY };
-      } else {
-        this.addLine({
-          startX: this.currentLine.startX,
-          startY: this.currentLine.startY,
-          endX: mouseX,
-          endY: mouseY
+      },
+      handleLineClick(mouseX, mouseY) {
+        if (!this.currentLine) {
+          this.currentLine = { startX: mouseX, startY: mouseY };
+        } else {
+          this.addLine({
+            startX: this.currentLine.startX,
+            startY: this.currentLine.startY,
+            endX: mouseX,
+            endY: mouseY
+          });
+          this.currentLine = null;  // Reset after drawing the line
+          this.previewLine = null;  // Clear preview after drawing
+        }
+      },
+      handlePolygonClick(mouseX, mouseY) {
+        this.currentPolygon.push({ x: mouseX, y: mouseY });
+        this.previewLine = null;
+        this.redrawCanvas();
+      },
+      finalizePolygon() {
+        if (this.currentPolygon.length > 2) {
+          this.addPolygon({ vertices: this.currentPolygon });
+        }
+        this.currentPolygon = [];
+        this.redrawCanvas();
+      },
+      redrawCanvas() {
+        const ctx = this.$refs.interactiveCanvas.getContext('2d');
+        ctx.clearRect(0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
+        if (this.img) {
+            ctx.drawImage(this.img, 0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
+        }
+        this.points.forEach(point => point.draw(ctx));
+        this.lines.forEach(line => line.draw(ctx));
+        this.polygons.forEach(polygon => polygon.draw(ctx));
+        // Draw polygon preview
+        if (this.tool === 'polygon' && this.currentPolygon.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(this.currentPolygon[0].x, this.currentPolygon[0].y);
+        this.currentPolygon.forEach((vertex, index) => {
+            if (index > 0) {
+            ctx.lineTo(vertex.x, vertex.y);
+            }
         });
-        this.currentLine = null;
+        // If there's a preview line (mouse is moving), draw it
+        if (this.previewLine) {
+            ctx.lineTo(this.previewLine.endX, this.previewLine.endY);
+            ctx.lineTo(this.currentPolygon[0].x, this.currentPolygon[0].y); // Close the shape for visual clarity
+        }
+        ctx.strokeStyle = '#ff0000'; // Red color for the polygon preview
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        }
+        if (this.previewLine) {
+          ctx.beginPath();
+          ctx.moveTo(this.previewLine.startX, this.previewLine.startY);
+          ctx.lineTo(this.previewLine.endX, this.previewLine.endY);
+          ctx.strokeStyle = '#ff0000';  // Red color for the preview line
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      },
+      clearCanvas() {
+        this.ctx.clearRect(0, 0, 400, 400);
+        this.clearPoints();  // Clear Vuex state for points
+      },
+      getMousePosition(e) {
+        const rect = this.$refs.interactiveCanvas.getBoundingClientRect();
+        return { mouseX: e.clientX - rect.left, mouseY: e.clientY - rect.top };
+      },
+      clearPreview() {
+        if (this.previewLine) {
+          this.previewLine = null;
+          this.redrawCanvas();
+        }
       }
-    },
-    handlePolygonClick(mouseX, mouseY) {
-      this.currentPolygon.push({ x: mouseX, y: mouseY });
-      console.log(this.currentPolygon);
-    },
-    finalizePolygon() {
-        console.log("Current state polygons before adding new:", this.polygons);
-      if (this.currentPolygon.length > 2) {
-        console.log("Current:", this.currentPolygon);
-        this.addPolygon({ vertices: this.currentPolygon });
-      }
-      this.currentPolygon = [];
-        console.log("Current state polygons after adding new:", this.polygons[0].points);
-    },
-    redrawCanvas() {
-    const ctx = this.$refs.interactiveCanvas.getContext('2d');
-    ctx.clearRect(0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
-
-    if (this.img) {
-        ctx.drawImage(this.img, 0, 0, this.$refs.interactiveCanvas.width, this.$refs.interactiveCanvas.height);
     }
-
-    // Draw all points
-    this.points.forEach(point => {
-        point.draw(ctx);
-    });
-
-    // Draw all lines
-    this.lines.forEach(line => {
-        line.draw(ctx);
-    });
-
-    // Draw all polygons
-    this.polygons.forEach(polygon => {
-        polygon.draw(ctx);
-    });
-},
-    clearCanvas() {
-      this.$refs.interactiveCanvas.getContext('2d').clearRect(0, 0, 400, 400);
-      // Add clearing methods for Vuex states if necessary
-    }
-  }
 };
 </script>
-
-<style scoped>
-.btn-draw-points {
-    background-color: #42A5F5; /* Light blue */
-    color: white;
-}
-
-.btn-draw-lines {
-    background-color: #66BB6A; /* Green */
-    color: white;
-}
-
-.btn-draw-polygons {
-    background-color: #FFA726; /* Orange */
-    color: white;
-}
-
-.btn-finalize-polygon {
-    background-color: #AB47BC; /* Purple */
-    color: white;
-}
-
-.btn-clear-canvas {
-    background-color: #EF5350; /* Red */
-    color: white;
-}
-
-/* You can also add general hover effects */
-.v-btn:hover {
-    opacity: 0.85;
-}
-</style>
